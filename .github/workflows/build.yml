@@ -1,0 +1,25 @@
+name: Build
+run-name: Build
+permissions:
+  contents: read
+  packages: write
+
+on:
+  push:
+    branches:
+      - develop
+
+    tags:
+      - '*'
+
+  pull_request:
+    branches:
+      - develop
+      - master
+
+jobs:
+  build:
+    name: 'Build ${{ github.repository }}'
+    uses: teddybeermaniac/GitHub.Workflows/.github/workflows/docker-build-image.yml@master
+    with:
+      authors: 'Michał Przybyś <michal@przybys.eu>'
