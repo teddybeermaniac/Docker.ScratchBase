@@ -4,6 +4,19 @@ RUN apk add --no-cache \
     build-base \
     busybox-static
 
+FROM base AS su-exec
+
+ARG SU_EXEC_VERSION=0.2
+
+WORKDIR /build
+RUN wget -O "/build/su-exec-${SU_EXEC_VERSION}.tar.gz" "https://github.com/ncopa/su-exec/archive/refs/tags/v${SU_EXEC_VERSION}.tar.gz" && \
+    tar -xf "/build/su-exec-${SU_EXEC_VERSION}.tar.gz"
+
+WORKDIR "/build/su-exec-${SU_EXEC_VERSION}"
+RUN make -j "$(nproc --all)" su-exec-static && \
+    install -D su-exec-static /install/bin/su-exec && \
+    strip /install/bin/su-exec
+
 FROM base AS tini
 
 RUN apk add --no-cache \
@@ -23,20 +36,16 @@ RUN cmake -DCMAKE_INSTALL_PREFIX=/ "/tini-${TINI_VERSION}" && \
 FROM scratch
 
 COPY --from=base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=tini /install/bin/tini-static /sbin/tini
+COPY --from=su-exec --chmod=700 /install/bin/su-exec /sbin/su-exec
+COPY --from=tini --chmod=700 /install/bin/tini-static /sbin/tini
 
 COPY --from=base /bin/busybox.static /busybox
 RUN [ "/busybox", "touch", "/etc/group", "/etc/passwd" ]
-RUN [ "/busybox", "addgroup", "-g", "65534", "nobody" ]
-RUN [ "/busybox", "rm", "/etc/group-" ]
-RUN [ "/busybox", "adduser", "-D", "-G", "nobody", "-H", "-g", "", "-h", "/", "-s", "/bin/false", "-u", "65534", "nobody" ]
-RUN [ "/busybox", "rm", "/etc/passwd-" ]
-RUN [ "/busybox", "mkdir", "-p", "/app" ]
-RUN [ "/busybox", "chown", "-R", "nobody:nobody", "/app" ]
-RUN [ "/busybox", "rm", "/busybox" ]
+RUN [ "/busybox", "addgroup", "-g", "65534", "nogroup" ]
+RUN [ "/busybox", "adduser", "-D", "-G", "nogroup", "-g", "", "-h", "/app", "-s", "/bin/false", "-u", "65534", "nobody" ]
+RUN [ "/busybox", "rm", "/busybox", "/etc/group-", "/etc/passwd-" ]
 
 EXPOSE 8080
-USER nobody
 WORKDIR /app
 
-ENTRYPOINT [ "tini", "-g", "-s", "-v", "--" ]
+ENTRYPOINT [ "tini", "-g", "-s", "-v", "--", "su-exec", "nobody:nogroup" ]
