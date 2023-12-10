@@ -1,4 +1,4 @@
-# Docker.StaticHTTPD
+# Docker.ScratchBase
 A tiny, scratch-based base Docker image for my other tiny images.
 
 ## Usage
