@@ -59,4 +59,4 @@ RUN --mount=from=base,source=/bin/busybox.static,target=/bin/busybox \
 EXPOSE 8080
 WORKDIR /app
 
-ENTRYPOINT [ "tini", "-g", "-s", "-v", "--", "su-exec", "nobody:nogroup" ]
+ENTRYPOINT [ "tini", "-g", "-s", "-v", "--", "su-exec", "nobody:nobody" ]
